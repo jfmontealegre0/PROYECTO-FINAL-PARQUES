@@ -1,0 +1,107 @@
+import random
+import os
+
+
+def limpiar():
+    os.system("clear")
+
+# Crear tablero
+def hacer_tablero():
+    tablero = ["--"] * 68  # 68 casillas vacías
+    casillas_seguras = [5, 12, 29, 46]  # Casillas seguras donde no pueden capturar
+    for s in casillas_seguras:
+        tablero[s] = "🔒"  # Casillas seguras
+    return tablero
+
+#  Jugadores
+jugadores = {
+    "A": {"fichas": [-1, -1], "icono": "🔴"},
+    "B": {"fichas": [-1, -1], "icono": "🔵"}
+}
+
+#  Mostrar el tablero 
+def mostrar_tablero(tablero):
+    limpiar()
+    print("\n".join([" | ".join(tablero[i:i+10]) for i in range(0, 68, 10)]))
+    print()
+
+# Tirar los dados 
+def tirar_dados(modo_manual=False):
+    if modo_manual:
+        dado1 = int(input("Dado 1 (1-6): "))
+        dado2 = int(input("Dado 2 (1-6): "))
+    else:
+        dado1, dado2 = random.randint(1, 6), random.randint(1, 6)
+
+    print(f"🎲 Dados: {dado1}, {dado2}")
+    return dado1, dado2
+
+# Sacar fichas de la cárcel
+def puede_salir(dado1, dado2):
+    return dado1 == 5 or dado2 == 5
+
+# Mover fichas
+def mover_ficha(jugador, ficha_idx, pasos, tablero):
+    posicion_actual = jugadores[jugador]["fichas"][ficha_idx]
+
+    if posicion_actual == -1:
+        print("❌ Esta ficha está en la cárcel.")
+        return False
+
+    nueva_posicion = (posicion_actual + pasos) % 68  # Movimiento
+
+    # Si la casilla está ocupada por otra ficha enemiga, la captura
+    for otro_jugador, datos in jugadores.items():
+        if otro_jugador != jugador and nueva_posicion in datos["fichas"]:
+            if nueva_posicion in [5, 12, 29, 46]:  # Casilla segura
+                print("⛔ No puedes capturar en casilla segura.")
+                return False
+            print(f"💥 Capturaste una ficha de {otro_jugador}. Vuelve a la cárcel.")
+            jugadores[otro_jugador]["fichas"][datos["fichas"].index(nueva_posicion)] = -1  # Regresa a la cárcel
+
+    # Mueve la ficha
+    jugadores[jugador]["fichas"][ficha_idx] = nueva_posicion
+    tablero[nueva_posicion] = jugadores[jugador]["icono"]
+    return True
+
+# Turnos del juego 
+def jugar():
+    tablero = hacer_tablero()
+    turno = 0
+    modo_manual = input("¿Modo manual? (s/n): ").lower() == "s"
+    
+    while True:
+        jugador = list(jugadores.keys())[turno % 2]
+        print(f"\n🎮 Turno de {jugador} ({jugadores[jugador]['icono']})")
+        dado1, dado2 = tirar_dados(modo_manual)
+
+        if puede_salir(dado1, dado2) and -1 in jugadores[jugador]["fichas"]:
+            ficha_idx = jugadores[jugador]["fichas"].index(-1)
+            jugadores[jugador]["fichas"][ficha_idx] = 0  # Sale de la cárcel
+            print(f"🚀 {jugador} saca una ficha a la casilla 0.")
+
+        else:
+            print("📍 Selecciona una ficha para mover:")
+            for i, pos in enumerate(jugadores[jugador]["fichas"]):
+                estado = "CÁRCEL" if pos == -1 else f"Casilla {pos}"
+                print(f"{i+1}. Ficha {i+1} en {estado}")
+
+            while True:
+                try:
+                    eleccion = int(input("Elige 1 o 2: ")) - 1
+                    if eleccion in [0, 1]:
+                        break
+                    else:
+                        print("❌ Opción inválida, elige 1 o 2.")
+                except ValueError:
+                    print("❌ Ingresa un número válido.")
+
+            pasos = dado1 + dado2
+            if not mover_ficha(jugador, eleccion, pasos, tablero):
+                print("⚠ No se pudo mover la ficha, intenta otra.")
+
+        mostrar_tablero(tablero)
+        turno += 1  # Cambio de turno
+
+# Iniciar juego
+jugar()
